@@ -6,11 +6,14 @@ output: html_document
 ---
 
 1. Load and Check Data
-```{r}
+```{r, message=FALSE}
 library(dplyr)
 library(tidyverse)
 setwd("/Users/zhangxinyi/Desktop/info201/ps5")
 data <- read_delim("gapminder.csv")
+```
+
+```{r}
 dim(data)
 sample_n(data, 5)
 ```
