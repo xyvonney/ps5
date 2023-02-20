@@ -1,0 +1,233 @@
+---
+title: "assignment"
+author: "Xinyi (Yvonne) Zhang"
+date: "2023-02-19"
+output: html_document
+---
+
+1. Load and Check Data
+```{r}
+library(dplyr)
+library(tidyverse)
+setwd("/Users/zhangxinyi/Desktop/info201/ps5")
+data <- read_delim("gapminder.csv")
+dim(data)
+sample_n(data, 5)
+```
+
+2. Descriptive statistics 
+(1) In the column iso3, there are 253 countries. In the column iso2, there are 249 countries. In the column name, there are 250 countries. 
+```{r}
+length(unique(data$iso3))
+length(unique(data$iso2))
+length(unique(data$name))
+```
+(2a) One name for each iso2 code in this data. 
+```{r}
+data %>% 
+  filter(!is.na(iso2)) %>% 
+  group_by(iso2) %>% 
+  summarize(n = n_distinct(name)) %>% 
+  arrange(desc(n))
+```
+(2b)CHANISL, GBM, KOS and NLD_CURACAO	are the countries that have
+more than one iso3-code. 
+```{r}
+data %>% 
+  group_by(name) %>% 
+  summarize(n = n_distinct(iso3)) %>% 
+  arrange(desc(n))
+data %>% 
+  filter(is.na(name)) %>% 
+  reframe(unique(iso3))
+```
+（3）
+```{r}
+min(data$time, na.rm = TRUE)
+max(data$time, na.rm = TRUE)
+```
+
+3. CO2 emissions
+(1) In the columns co2 and co2_PC, 2017, 2018 and 2019 these three years have the most missing value. 
+```{r}
+data %>% 
+  filter(is.na(co2)) %>% 
+  group_by(time) %>% 
+  summarize(co2_na = n()) %>% 
+  arrange(desc(co2_na))
+data %>% 
+  filter(is.na(co2_PC)) %>% 
+  group_by(time) %>% 
+  summarize(co2PC_na = n()) %>% 
+  arrange(desc(co2PC_na))
+```
+
+(2) The line graph shows the total CO2 emissions over time for the U.S, China, India, Brazil and Albania Each point represents the CO2 emissions of the year. The CO2 emissions of China, India and Brazil increase over time. The CO2 emissions of U.S. increase for a long period and then decrease. The CO2 emissions of Albania keeps very low. 
+```{r}
+select_countries <- data %>%
+  filter(!is.na(co2)) %>% 
+  filter(iso3 == "USA" | iso3 == "CHN" | iso3 == "IND" | iso3 == "BRA" |          iso3== "ALB")
+ggplot(select_countries, 
+       aes(time, 
+           co2, 
+           col=factor(name))) + 
+  geom_line() + 
+  geom_point()
+```
+
+(3) The U.S. has much higher CO2 emission per capita than any other country does. 
+```{r}
+select_countries <- data %>%
+  filter(!is.na(co2_PC)) %>% 
+  filter(iso3 == "USA" | iso3 == "CHN" | iso3 == "IND" | iso3 == "BRA" |          iso3== "ALB")
+ggplot(select_countries, 
+       aes(time, 
+           co2_PC, 
+           col=factor(name))) + 
+  geom_line() + 
+  geom_point()
+```
+
+(4) Africa has lower CO2 emission per capita and its CO2 emission per capita exceeds 1 since the year of 2000. Americas has higher CO2 emission per capita, but it decrease in the year of 1986. Asia starts with lower CO2 emission per capita, but it increase over time. Europe starts with high CO2 emission per capita and increase over time. Oceania's CO2 emission per capita increase over time, but it fluctuates around 4 since 1982. 
+```{r}
+CO2_PC_continents <- data %>% 
+  filter(!is.na(co2_PC)) %>% 
+  filter(!is.na(region)) %>% 
+  group_by(region, time) %>% 
+  summarise(CO2_PC_continents = mean(co2_PC), .groups = 'drop')
+CO2_PC_continents
+```
+
+(5) The average CO2 per capital of all the continents of 2016 are higher than 1960, except Americas. 
+```{r}
+CO2_PC_continents %>% 
+  filter(time == "1960" | time == "2016") %>% 
+  ggplot(aes(region, 
+             CO2_PC_continents, 
+             fill=factor(time))) + 
+  geom_col(position = "dodge") + 
+  labs(x = "Continent", 
+       y = "Average CO2 per capita", 
+       fill = "Year")
+```
+
+(6) Qatar, Trinidad and Tobago, and Kuwaitare are the three largest CO2 emitters (in terms of CO2 per capita) in 2016. Burundi, Somalia, and Congo, Democratic Republic of the are the three smallest CO2 emitters (in terms of CO2 per capita) in 2016. 
+```{r}
+descending_co2_pc <- data %>% 
+  filter(time == "2016") %>% 
+  filter(!is.na(co2_PC)) %>% 
+  filter(!is.na(name)) %>% 
+  arrange(desc(co2_PC)) %>% 
+  select(name, co2_PC)
+head(descending_co2_pc, 3)
+tail(descending_co2_pc, 3)
+```
+
+4. GDP per capita
+(1) By graphing the data of 1960, it shows that GDP per capita is positive correlated with life expectancy . The countries in Africa has lower GDP per capita and lower life expectancy. The countries in Europe has higher GDP per capita and higher life expectancy. Asia has lower GDP per capita and lower life expectancy than Americas. 
+```{r}
+data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(GDP_PC)) %>% 
+  filter(time == "1960") %>% 
+  ggplot(aes(lifeExpectancy, GDP_PC, size = totalPopulation, 
+             col=region)) + 
+  geom_point(alpha=0.5) + 
+  scale_size_continuous(range = c(1, 10)) + 
+  theme(text = element_text(size=8)) + 
+  labs(x = "Life expectancy", 
+       y = "GDP per capita") + 
+  ggtitle("GDP per capita versus life expectancy by country for 1960")
+```
+
+(2) The data of 2019 also shows that life expectancy is positive correlated with GDP per capita. The countries in Africa has lower GDP per capita and lower life expectancy. The countries in Europe has higher GDP per capita and higher life expectancy. The data points of Americas and Asia are close. 
+```{r}
+data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(GDP_PC)) %>% 
+  filter(!is.na(region)) %>% 
+  filter(time == "2019") %>% 
+  ggplot(aes(lifeExpectancy, GDP_PC, size = totalPopulation, 
+             col=region)) + 
+  geom_point(alpha=0.5) + 
+  scale_size_continuous(range = c(1, 10)) + 
+  theme(text = element_text(size=8)) + 
+  labs(x = "Life expectancy", 
+       y = "GDP per capita") + 
+  ggtitle("GDP per capita versus life expectancy by country for 2019")
+```
+
+(3) Compared with the graph of 1960, we can see that both life expectancy and GDP per capital of Asia increased and getting closer to the data of Americas. In these 60 years, Africa is the continent which has lower GDP per capita and lower life expectancy. In these 60 years, Europe is the continent which has higher GDP per capita and higher life expectancy. 
+
+(4) The results fit with what I have seen on the figures, because the data points of one continent on previous two graphs gather around the average life expectancy of that continent. 
+```{r}
+mean_life_exp <- data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(region)) %>% 
+  filter(time == "1960" | time == "2019") %>% 
+  group_by(region, time) %>% 
+  summarise(mean_life_exp= mean(lifeExpectancy), .groups = 'drop')
+mean_life_exp
+```
+
+(5) Asia and Afria have huge growth on average life expectancy during these 60 years. Europe have lower growth on average life expectancy. The average life expectancy growth of Americas and Oceania are close. 
+```{r}
+mean_life_exp %>% 
+  group_by(region) %>% 
+  mutate(prev = lag(mean_life_exp), 
+          growth = mean_life_exp - prev) %>% 
+  filter(!is.na(growth)) %>% 
+  select(region, growth) %>% 
+  arrange(desc(growth))
+```
+
+(6) GDP per capita of most of the countries in 1960 are lower than 30000. In 2019, the frequency of GDP per capita with high value increased and the maximum GDP per capita value increased a lot compared with the maximum GDP per capita value in 1960. 
+```{r}
+data %>%
+  filter(!is.na(GDP_PC)) %>% 
+  filter(time == "1960" | time == "2019") %>% 
+  ggplot(aes(GDP_PC, 
+             fill=factor(time))) + 
+  geom_histogram(position = "dodge", bins = 30) +
+  labs(x = "GDP per capita", 
+       y = "Count", 
+       fill = "time")
+```
+
+(7) The rank of the U.S. in 1960 of life expectancy is 17. The rank of the U.S. in 2019 of life expectancy is 46. Although the life expectancy of 2019 is about 9 years higher than 1960, the ranking of life expectancy is lower in 2019. 
+```{r}
+US_rank_1960 <- data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(name)) %>% 
+  filter(time == "1960") %>% 
+  select(time, name, lifeExpectancy) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>% 
+  filter(name == "United States of America")
+US_rank_2019 <- data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(name)) %>% 
+  filter(time == "2019") %>% 
+  select(time, name, lifeExpectancy) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>% 
+  filter(name == "United States of America")
+US_rank_1960
+US_rank_2019
+```
+
+(8) The relative ranking of the U.S. in 1960 is 0.0904. The life expectancy of the U.S. is 9.04%. The relative ranking of the U.S. in 2019 is 0.2346. The life expectancy of the U.S. is around top 23.46%. Even though there are more countries in the 2019 data, the relative ranking of the life expectancy of the U.S. has fallen. 
+```{r}
+rr_1960 <- US_rank_1960$rank
+rr_2019 <- US_rank_2019$rank
+countries_1960 <- data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(name)) %>% 
+  filter(time == "1960") %>% 
+  summarize(n = n_distinct(name))
+countries_2019 <- data %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  filter(!is.na(name)) %>% 
+  filter(time == "2019") %>% 
+  summarize(n = n_distinct(name))
+rr_1960 / countries_1960$n
+rr_2019 / countries_2019$n
+```
